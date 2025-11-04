@@ -1,14 +1,18 @@
-// Módulo desacoplado para reCAPTCHA (cambiar 'v2' a 'v3' para migrar)
+// Configuración reCAPTCHA v3
 const recaptchaConfig = {
-    version: 'v2', // Cambia a 'v3' en el futuro
+    version: 'v3',
     siteKey: '6LcMGwIsAAAAAICmNGf1y9jCzTRjpL0rUhMjELuO'
 };
 
-// Validación reactiva en blur
+// Validación en tiempo real
 document.querySelectorAll('input, textarea').forEach(field => {
-    field.addEventListener('blur', () => validateField(field.id));
+    field.addEventListener('blur', () => {
+        const isValid = validateField(field.id);
+        field.setAttribute('aria-invalid', !isValid);
+    });
     field.addEventListener('input', () => {
         clearError(field.id);
+        field.setAttribute('aria-invalid', 'false');
         if (field.id === 'phone') formatPhone(field);
     });
 });
@@ -23,44 +27,44 @@ document.getElementById('contactForm').addEventListener('submit', async (e) => {
     const errors = validateForm();
     if (errors.length > 0) {
         displayErrors(errors);
+        // Auto-enfocar el primer campo con error
+        const firstErrorField = document.getElementById(errors[0].field);
+        firstErrorField.focus();
         btn.disabled = false;
         btn.textContent = 'Enviar';
         return;
     }
 
-    // Obtener token reCAPTCHA
-    const recaptchaResponse = grecaptcha.getResponse();
-    if (!recaptchaResponse) {
-        document.getElementById('captchaError').textContent = 'Completa el reCAPTCHA.';
-        btn.disabled = false;
-        btn.textContent = 'Enviar';
-        return;
-    }
-
-    // Enviar a backend
+    // Ejecutar reCAPTCHA v3
     try {
+        const recaptchaToken = await grecaptcha.execute(recaptchaConfig.siteKey, { action: 'submit' });
+        
+        // Enviar a backend
         const response = await fetch('/verify-recaptcha', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value.replace(/\D/g, ''), // Solo dígitos
-                subject: document.getElementById('subject').value,
-                message: document.getElementById('message').value,
-                recaptchaToken: recaptchaResponse
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.replace(/\D/g, ''),
+                subject: document.getElementById('subject').value.trim(),
+                message: document.getElementById('message').value.trim(),
+                recaptchaToken
             })
         });
         const result = await response.json();
         if (result.success) {
-            document.getElementById('feedback').textContent = 'Mensaje enviado exitosamente.';
+            showSuccess('¡Mensaje enviado exitosamente! Gracias por contactarnos.');
             document.getElementById('contactForm').reset();
-            grecaptcha.reset(); // Reset reCAPTCHA
+            // Reset aria-invalid
+            document.querySelectorAll('input, textarea').forEach(field => {
+                field.setAttribute('aria-invalid', 'false');
+            });
         } else {
-            document.getElementById('captchaError').textContent = 'Error en verificación.';
+            showError('Error en la verificación. Inténtalo de nuevo.');
         }
     } catch (error) {
-        document.getElementById('feedback').textContent = 'Error al enviar.';
+        showError('Error al enviar el mensaje. Verifica tu conexión.');
     }
     btn.disabled = false;
     btn.textContent = 'Enviar';
@@ -72,28 +76,32 @@ function validateField(fieldId) {
     let msg = '';
     switch (fieldId) {
         case 'name':
-            if (!value) msg = 'Nombre requerido.';
+            if (!value || value.length < 2) msg = 'Por favor, ingresa un nombre válido.';
             break;
         case 'email':
-            if (!value || !/\S+@\S+\.\S+/.test(value)) msg = 'Email válido requerido.';
+            if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) msg = 'Por favor, ingresa un email válido.';
             break;
         case 'phone':
             const digits = value.replace(/\D/g, '');
-            if (!digits || digits.length < 10) msg = 'Teléfono válido requerido (10 dígitos).';
+            if (!digits || digits.length < 10) msg = 'Por favor, ingresa un teléfono válido (10 dígitos).';
             break;
         case 'subject':
-            if (!value) msg = 'Asunto requerido.';
+            if (!value || value.length < 3) msg = 'Por favor, ingresa un asunto válido.';
             break;
         case 'message':
-            if (!value) msg = 'Mensaje requerido.';
+            if (!value || value.length < 10) msg = 'Por favor, ingresa un mensaje de al menos 10 caracteres.';
             break;
     }
-    document.getElementById(fieldId + 'Error').textContent = msg;
+    const errorElement = document.getElementById(fieldId + 'Error');
+    errorElement.textContent = msg;
+    errorElement.classList.toggle('error', !!msg);
     return !msg;
 }
 
 function clearError(fieldId) {
-    document.getElementById(fieldId + 'Error').textContent = '';
+    const errorElement = document.getElementById(fieldId + 'Error');
+    errorElement.textContent = '';
+    errorElement.classList.remove('error');
 }
 
 function validateForm() {
@@ -101,8 +109,7 @@ function validateForm() {
     const fields = ['name', 'email', 'phone', 'subject', 'message'];
     fields.forEach(field => {
         if (!validateField(field)) {
-            const msg = document.getElementById(field + 'Error').textContent;
-            if (msg) errors.push({ field, msg });
+            errors.push({ field, msg: document.getElementById(field + 'Error').textContent });
         }
     });
     return errors;
@@ -110,13 +117,15 @@ function validateForm() {
 
 function displayErrors(errors) {
     errors.forEach(err => {
-        document.getElementById(err.field + 'Error').textContent = err.msg;
+        const errorElement = document.getElementById(err.field + 'Error');
+        errorElement.textContent = err.msg;
+        errorElement.classList.add('error');
     });
 }
 
 function formatPhone(field) {
-    let value = field.value.replace(/\D/g, ''); // Solo dígitos
-    if (value.length > 10) value = value.slice(0, 10); // Máx 10 dígitos
+    let value = field.value.replace(/\D/g, '');
+    if (value.length > 10) value = value.slice(0, 10);
     if (value.length >= 6) {
         value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
     } else if (value.length >= 3) {
@@ -125,4 +134,18 @@ function formatPhone(field) {
         value = `(${value}`;
     }
     field.value = value;
+}
+
+function showSuccess(message) {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = message;
+    feedback.classList.remove('error');
+    feedback.classList.add('success');
+}
+
+function showError(message) {
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = message;
+    feedback.classList.remove('success');
+    feedback.classList.add('error');
 }
