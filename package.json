@@ -1,0 +1,16 @@
+{
+  "name": "my-html-css-app",
+  "version": "1.0.0",
+  "description": "A simple HTML and CSS application with a modular structure.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.17.1"
+  },
+  "author": "",
+  "license": "ISC"
+}
