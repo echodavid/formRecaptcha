@@ -1,7 +1,7 @@
 // Configuración reCAPTCHA v3
 const recaptchaConfig = {
     version: 'v3',
-    siteKey: '6LcMGwIsAAAAAICmNGf1y9jCzTRjpL0rUhMjELuO'
+    siteKey: '6LdyMAIsAAAAAHcLY89Agn3P0Rl8tcRZd4gvPRGe'
 };
 
 // Validación en tiempo real
@@ -22,6 +22,14 @@ document.getElementById('contactForm').addEventListener('submit', async (e) => {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Enviando...';
+
+    // Verificar conexión a internet y reCAPTCHA
+    if (!navigator.onLine || typeof grecaptcha === 'undefined') {
+        showError('Se requiere conexión a internet para enviar el formulario.');
+        btn.disabled = false;
+        btn.textContent = 'Enviar';
+        return;
+    }
 
     // Validación completa
     const errors = validateForm();
@@ -64,18 +72,7 @@ document.getElementById('contactForm').addEventListener('submit', async (e) => {
             showError('Error en la verificación. Inténtalo de nuevo.');
         }
     } catch (error) {
-        // Simulación: siempre éxito para pruebas
-        const result = { success: true };
-        if (result.success) {
-            showSuccess('¡Mensaje enviado exitosamente! Gracias por contactarnos.');
-            document.getElementById('contactForm').reset();
-            // Reset aria-invalid
-            document.querySelectorAll('input, textarea').forEach(field => {
-                field.setAttribute('aria-invalid', 'false');
-            });
-        } else {
-            showError('Error en la verificación. Inténtalo de nuevo.');
-        }
+        showError('Error al enviar el formulario. Verifica tu conexión a internet.');
     }
     btn.disabled = false;
     btn.textContent = 'Enviar';

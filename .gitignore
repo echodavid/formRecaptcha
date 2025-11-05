@@ -10,6 +10,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env*
 
 # Logs
 logs
@@ -70,3 +71,6 @@ build/
 # Temporary files
 *.tmp
 *.temp
+
+# Old database file
+form_submissions.db

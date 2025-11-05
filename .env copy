@@ -1,1 +1,2 @@
-RECAPTCHA_SECRET=secret
+RECAPTCHA_SECRET=6LdyMAIsAAAAAMJJwnr6COITYKOw41kns4og19xq
+DATABASE_URL=postgresql://user:password@localhost:5432/form_submissions
