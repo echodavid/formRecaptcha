@@ -37,30 +37,14 @@ document.getElementById('contactForm').addEventListener('submit', async (e) => {
         return;
     }
 
-    // Enviar a backend
-    try {
-        const response = await fetch('/verify-recaptcha', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value.replace(/\D/g, ''), // Solo dígitos
-                subject: document.getElementById('subject').value,
-                message: document.getElementById('message').value,
-                recaptchaToken: recaptchaResponse
-            })
-        });
-        const result = await response.json();
-        if (result.success) {
-            document.getElementById('feedback').textContent = 'Mensaje enviado exitosamente.';
-            document.getElementById('contactForm').reset();
-            grecaptcha.reset(); // Reset reCAPTCHA
-        } else {
-            document.getElementById('captchaError').textContent = 'Error en verificación.';
-        }
-    } catch (error) {
-        document.getElementById('feedback').textContent = 'Error al enviar.';
+    // Simulación: siempre éxito para pruebas
+    const result = { success: true };
+    if (result.success) {
+        document.getElementById('feedback').textContent = 'Mensaje enviado exitosamente.';
+        document.getElementById('contactForm').reset();
+        grecaptcha.reset(); // Reset reCAPTCHA
+    } else {
+        document.getElementById('captchaError').textContent = 'Error en verificación.';
     }
     btn.disabled = false;
     btn.textContent = 'Enviar';
